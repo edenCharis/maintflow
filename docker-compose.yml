@@ -8,8 +8,6 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-maintflow}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-maintflow}"]
       interval: 5s
