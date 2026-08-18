@@ -12,6 +12,7 @@ import { UserMenu } from "@/components/UserMenu";
 import {
   AlertTriangle,
   Bell,
+  Building2,
   CalendarClock,
   ClipboardList,
   Hammer,
@@ -19,6 +20,7 @@ import {
   Maximize,
   Menu,
   Minimize,
+  Users,
   Wrench,
   X,
 } from "lucide-react";
@@ -41,6 +43,18 @@ const NAV_ITEMS: { href: string; label: string; icon: typeof Bell; roles: Role[]
     label: "Préventif",
     icon: CalendarClock,
     roles: ["admin", "maintenance_manager"],
+  },
+  {
+    href: "/sites",
+    label: "Sites",
+    icon: Building2,
+    roles: ["admin"],
+  },
+  {
+    href: "/users",
+    label: "Utilisateurs",
+    icon: Users,
+    roles: ["admin"],
   },
   {
     href: "/requests",

@@ -1,12 +1,13 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiJson, ApiError, Paginated } from "@/lib/api";
-import { UserSummary, WorkOrder, WorkOrderResult } from "@/lib/types";
+import { UserSummary, WorkOrder, WorkOrderPhoto, WorkOrderResult } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { useAuth } from "@/lib/auth";
 import {
+  Camera,
   CheckCircle2,
   ChevronLeft,
   Pause,
@@ -65,6 +66,20 @@ export default function WorkOrderDetailPage({ params }: { params: Promise<{ id: 
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function uploadPhoto(kind: "before" | "after", file: File) {
+    setActionError(null);
+    try {
+      const form = new FormData();
+      form.set("work_order", id);
+      form.set("kind", kind);
+      form.set("image", file);
+      await apiJson("/work-orders/photos/", { method: "POST", body: form });
+      load();
+    } catch {
+      setActionError("Échec de l'envoi de la photo.");
     }
   }
 
@@ -269,6 +284,14 @@ export default function WorkOrderDetailPage({ params }: { params: Promise<{ id: 
             ))}
           </ul>
         </div>
+      )}
+
+      {(isAssignedTechnician || wo.photos.length > 0) && (
+        <PhotosSection
+          photos={wo.photos}
+          canUpload={isAssignedTechnician && !["closed"].includes(wo.status)}
+          onUpload={uploadPhoto}
+        />
       )}
 
       {wo.validation_note && (
@@ -503,6 +526,99 @@ function NotePanel({
       />
       <PanelActions busy={busy} onCancel={onCancel} confirmLabel={confirmLabel} onConfirm={() => onSubmit(note)} />
     </Panel>
+  );
+}
+
+function PhotosSection({
+  photos,
+  canUpload,
+  onUpload,
+}: {
+  photos: WorkOrderPhoto[];
+  canUpload: boolean;
+  onUpload: (kind: "before" | "after", file: File) => void;
+}) {
+  const beforeInputRef = useRef<HTMLInputElement>(null);
+  const afterInputRef = useRef<HTMLInputElement>(null);
+  const before = photos.filter((p) => p.kind === "before");
+  const after = photos.filter((p) => p.kind === "after");
+
+  return (
+    <div className="space-y-4 rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-soft)]">
+      <p className="text-sm font-semibold text-foreground">Photos</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PhotoGroup
+          label="Avant"
+          photos={before}
+          canUpload={canUpload}
+          inputRef={beforeInputRef}
+          onPick={(file) => onUpload("before", file)}
+        />
+        <PhotoGroup
+          label="Après"
+          photos={after}
+          canUpload={canUpload}
+          inputRef={afterInputRef}
+          onPick={(file) => onUpload("after", file)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PhotoGroup({
+  label,
+  photos,
+  canUpload,
+  inputRef,
+  onPick,
+}: {
+  label: string;
+  photos: WorkOrderPhoto[];
+  canUpload: boolean;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onPick: (file: File) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {photos.map((p) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={p.id}
+            src={p.image}
+            alt={label}
+            className="h-20 w-20 rounded-lg border border-border object-cover"
+          />
+        ))}
+        {canUpload && (
+          <>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground hover:bg-surface-hover"
+            >
+              <Camera size={16} />
+              <span className="text-[10px]">Ajouter</span>
+            </button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onPick(file);
+                e.target.value = "";
+              }}
+            />
+          </>
+        )}
+        {photos.length === 0 && !canUpload && <p className="text-xs text-muted-foreground">—</p>}
+      </div>
+    </div>
   );
 }
 

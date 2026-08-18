@@ -51,6 +51,66 @@ class AssetViewSet(TenantModelViewSet):
         img.save(buffer, format="PNG")
         return HttpResponse(buffer.getvalue(), content_type="image/png")
 
+    @action(detail=True, methods=["get"])
+    def history(self, request, pk=None):
+        """A merged, chronological timeline of everything that happened to
+        this asset - failures, requests, and each work order's key
+        milestones (created / validated / closed) - per spec section 30.
+        """
+        asset = self.get_object()
+        events = []
+
+        for r in asset.requests.all():
+            events.append(
+                {
+                    "date": r.created_at,
+                    "type": "request",
+                    "title": f"Demande créée : {r.description[:80]}",
+                    "status": r.status,
+                }
+            )
+
+        for f in asset.failures.all():
+            events.append(
+                {
+                    "date": f.started_at,
+                    "type": "failure",
+                    "title": f"Panne signalée : {f.description[:80]}",
+                    "status": f.status,
+                }
+            )
+
+        for wo in asset.work_orders.all():
+            events.append(
+                {
+                    "date": wo.created_at,
+                    "type": "work_order",
+                    "title": f"OT {wo.number} créé — {wo.title}",
+                    "status": wo.status,
+                }
+            )
+            if wo.validated_at:
+                events.append(
+                    {
+                        "date": wo.validated_at,
+                        "type": "work_order",
+                        "title": f"OT {wo.number} validé",
+                        "status": wo.status,
+                    }
+                )
+            if wo.closed_at:
+                events.append(
+                    {
+                        "date": wo.closed_at,
+                        "type": "work_order",
+                        "title": f"OT {wo.number} clôturé",
+                        "status": wo.status,
+                    }
+                )
+
+        events.sort(key=lambda e: e["date"], reverse=True)
+        return Response(events)
+
 
 class AssetDocumentViewSet(TenantModelViewSet):
     queryset = AssetDocument.objects.all()

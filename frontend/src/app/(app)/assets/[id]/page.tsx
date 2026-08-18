@@ -3,12 +3,18 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { apiJson, API_BASE, getTokens } from "@/lib/api";
-import { Asset } from "@/lib/types";
+import { Asset, AssetHistoryEvent } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { useAuth } from "@/lib/auth";
-import { AlertTriangle, Pencil, QrCode } from "lucide-react";
+import { AlertTriangle, ClipboardList, Pencil, QrCode, Wrench } from "lucide-react";
 
 const MANAGE_ROLES = ["admin", "maintenance_manager"];
+
+const EVENT_ICON: Record<AssetHistoryEvent["type"], typeof Wrench> = {
+  request: ClipboardList,
+  failure: AlertTriangle,
+  work_order: Wrench,
+};
 
 export default function AssetDetailPage({
   params,
@@ -19,6 +25,7 @@ export default function AssetDetailPage({
   const { user } = useAuth();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  const [history, setHistory] = useState<AssetHistoryEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const canManage = user ? MANAGE_ROLES.includes(user.role) : false;
 
@@ -26,6 +33,9 @@ export default function AssetDetailPage({
     apiJson<Asset>(`/assets/${id}/`)
       .then(setAsset)
       .catch(() => setError("Équipement introuvable."));
+    apiJson<AssetHistoryEvent[]>(`/assets/${id}/history/`)
+      .then(setHistory)
+      .catch(() => setHistory([]));
   }, [id]);
 
   useEffect(() => {
@@ -132,6 +142,38 @@ export default function AssetDetailPage({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-soft)]">
+        <p className="mb-4 text-sm font-semibold text-foreground">Historique</p>
+        {history && history.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Aucun événement enregistré pour cet équipement.
+          </p>
+        )}
+        {history && history.length > 0 && (
+          <ul className="space-y-4">
+            {history.map((event, i) => {
+              const Icon = EVENT_ICON[event.type];
+              return (
+                <li key={i} className="flex gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
+                    <Icon size={14} />
+                  </span>
+                  <div className="min-w-0 flex-1 border-b border-border pb-4 last:border-0 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm text-foreground">{event.title}</p>
+                      <Badge value={event.status} />
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {new Date(event.date).toLocaleString("fr-FR")}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );

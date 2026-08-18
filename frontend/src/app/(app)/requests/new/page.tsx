@@ -15,6 +15,7 @@ function NewRequestForm() {
   const [assetId, setAssetId] = useState(presetAssetId);
   const [description, setDescription] = useState("");
   const [urgency, setUrgency] = useState("normal");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -29,10 +30,13 @@ function NewRequestForm() {
     setError(null);
     setSubmitting(true);
     try {
-      await apiJson("/requests/", {
-        method: "POST",
-        body: JSON.stringify({ asset: assetId, description, urgency }),
-      });
+      const form = new FormData();
+      form.set("asset", assetId);
+      form.set("description", description);
+      form.set("urgency", urgency);
+      if (photoFile) form.set("photo", photoFile);
+
+      await apiJson("/requests/", { method: "POST", body: form });
       router.push("/requests");
     } catch (err) {
       setError(err instanceof ApiError ? "Vérifiez les informations saisies." : "Erreur réseau.");
@@ -104,6 +108,17 @@ function NewRequestForm() {
             <option value="high">Haute</option>
             <option value="critical">Critique</option>
           </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Photo</label>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-soft-foreground"
+          />
         </div>
 
         {error && (

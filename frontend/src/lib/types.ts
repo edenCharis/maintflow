@@ -23,6 +23,20 @@ export interface MeUser {
   is_active: boolean;
 }
 
+export interface AppUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: Role;
+  phone: string;
+  photo: string | null;
+  function: string;
+  company: string;
+  is_active: boolean;
+  date_joined: string;
+}
+
 export interface Site {
   id: string;
   company: string;
@@ -70,6 +84,13 @@ export interface Asset {
   warranty_end_at: string | null;
   description: string;
   photo: string | null;
+}
+
+export interface AssetHistoryEvent {
+  date: string;
+  type: "request" | "failure" | "work_order";
+  title: string;
+  status: string;
 }
 
 export interface AssetScan {
